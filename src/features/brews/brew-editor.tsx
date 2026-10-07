@@ -247,8 +247,15 @@ export function BrewEditor({
                         <input
                           type="number"
                           step="any"
-                          value={delta}
-                          onChange={(e) => setDelta(Number(e.target.value))}
+                          value={delta === 0 ? "" : delta}
+                          placeholder="0"
+                          onChange={(e) =>
+                            setDelta(
+                              e.target.value === ""
+                                ? 0
+                                : Number(e.target.value),
+                            )
+                          }
                         />
                       </label>
                     </div>

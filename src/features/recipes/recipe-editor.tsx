@@ -63,7 +63,8 @@ export function RecipeEditor({
         type="number"
         min={min}
         step="any"
-        value={r[key] as number}
+        value={(r[key] as number) === 0 ? "" : (r[key] as number)}
+        placeholder={min > 0 ? `Min ${min}` : "0"}
         onChange={(e) =>
           update(key, e.target.value === "" ? 0 : Number(e.target.value))
         }
@@ -261,13 +262,22 @@ export function RecipeEditor({
                       type="number"
                       min={key === "water" ? 1 : 20}
                       max={key === "water" ? 3000 : 100}
-                      value={step[key]}
+                      value={step[key] === 0 ? "" : step[key]}
+                      placeholder={
+                        key === "water" ? "Enter target" : "Enter temperature"
+                      }
                       onChange={(e) =>
                         update(
                           "steps",
                           r.steps.map((s, j) =>
                             j === i
-                              ? { ...s, [key]: Number(e.target.value) }
+                              ? {
+                                  ...s,
+                                  [key]:
+                                    e.target.value === ""
+                                      ? 0
+                                      : Number(e.target.value),
+                                }
                               : s,
                           ),
                         )
