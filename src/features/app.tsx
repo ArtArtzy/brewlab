@@ -13,6 +13,7 @@ import { Bean, Data, Drink, drinkNames } from "@/lib/domain/types";
 import { Mark } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { BeanEditor } from "./beans/bean-editor";
 import { BeanList } from "./beans/bean-list";
 import { BeanDetail } from "./beans/bean-detail";
@@ -22,6 +23,7 @@ import { PinEditor } from "./recipes/pin-editor";
 import { BrewEditor } from "./brews/brew-editor";
 import { EquipmentEditor } from "./settings/equipment-editor";
 import { Settings } from "./settings/settings";
+import { TasteNoteEditor } from "./settings/taste-note-editor";
 import { Home } from "./home";
 import { Screen, Modal } from "./types";
 import { RecipeScreen } from "./recipes/recipe-screen";
@@ -47,6 +49,7 @@ export function BrewLab({
   unlocked: boolean;
   configured: boolean;
 }) {
+  const { ask: confirm, dialog: confirmDialog } = useConfirm();
   const [ready, setReady] = useState(unlocked),
     [data, setData] = useState<Data>(emptyData),
     [screen, setScreen] = useState<Screen>({ type: "home" }),
@@ -426,22 +429,30 @@ export function BrewLab({
                       ),
                     )
                   }
-                  remove={() => {
+                  remove={async () => {
                     if (
-                      confirm(
-                        `Delete ${bean.name} and all its recipes, brews and purchases? This cannot be undone.`,
-                      )
+                      await confirm({
+                        title: `Delete ${bean.name}?`,
+                        description:
+                          "This will permanently remove the bean and all its recipes, brews and purchases.",
+                        confirmLabel: "Delete bean",
+                        destructive: true,
+                      })
                     )
                       run(async () => {
                         await mutate({ action: "deleteBean", id: bean.id });
                         nav({ type: "beans" });
                       });
                   }}
-                  deleteBrew={(b) => {
+                  deleteBrew={async (b) => {
                     if (
-                      confirm(
-                        "Delete this brew log? Latest and pins stay intact.",
-                      )
+                      await confirm({
+                        title: "Delete brew log?",
+                        description:
+                          "This removes the brew log and its feedback.",
+                        confirmLabel: "Delete brew",
+                        destructive: true,
+                      })
                     )
                       run(() => mutate({ action: "deleteBrew", id: b.id }));
                   }}
@@ -451,14 +462,25 @@ export function BrewLab({
             {screen.type === "settings" && (
               <Settings
                 data={data}
+                editNote={(item) => setModal({ type: "tasteNote", item })}
+                restoreNotes={() =>
+                  mutate({ action: "seedTasteNotes", value: {} })
+                }
+                removeNote={async (item) => {
+                  await mutate({ action: "deleteTasteNote", id: item.id });
+                }}
                 edit={(kind, item) =>
                   setModal({ type: "equipment", kind, item })
                 }
-                remove={(e) => {
+                remove={async (e) => {
                   if (
-                    confirm(
-                      `Delete ${e.name}? Historical snapshots retain its name and settings.`,
-                    )
+                    await confirm({
+                      title: `Delete ${e.name}?`,
+                      description:
+                        "Historical recipe and brew snapshots will keep the saved equipment details.",
+                      confirmLabel: "Delete equipment",
+                      destructive: true,
+                    })
                   )
                     run(() => mutate({ action: "deleteEquipment", id: e.id }));
                 }}
@@ -511,8 +533,16 @@ export function BrewLab({
         <Dialog
           title="Your recipe"
           description="Saving creates a new Latest and preserves every previous version."
-          onClose={() => {
-            if (confirm("Discard unsaved recipe changes?")) setModal(null);
+          onClose={async () => {
+            if (
+              await confirm({
+                title: "Discard recipe changes?",
+                description: "Your unsaved recipe edits will be lost.",
+                confirmLabel: "Discard changes",
+                destructive: true,
+              })
+            )
+              setModal(null);
           }}
         >
           <RecipeEditor
@@ -551,6 +581,14 @@ export function BrewLab({
           close={() => setModal(null)}
         />
       )}
+      {modal?.type === "tasteNote" && (
+        <TasteNoteEditor
+          item={modal.item}
+          data={data}
+          save={save}
+          close={() => setModal(null)}
+        />
+      )}
       {modal?.type === "pin" && (
         <PinEditor
           version={modal.version}
@@ -559,6 +597,7 @@ export function BrewLab({
           close={() => setModal(null)}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

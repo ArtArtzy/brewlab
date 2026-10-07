@@ -5,11 +5,12 @@ import {
   Data,
   beanSchema,
   categories,
-  noteSeeds,
   roasts,
+  noteSeeds,
 } from "@/lib/domain/types";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useConfirm } from "@/components/ui/use-confirm";
 type Save = (action: string, value: unknown, id?: string) => Promise<void>;
 export function BeanEditor({
   bean,
@@ -22,6 +23,7 @@ export function BeanEditor({
   save: Save;
   close: () => void;
 }) {
+  const { ask: confirm, dialog: confirmDialog } = useConfirm();
   const [v, set] = useState(
     bean
       ? { ...bean }
@@ -44,7 +46,7 @@ export function BeanEditor({
     [customProcess, setCustomProcess] = useState("");
   const update = (key: string, value: unknown) =>
     set((p) => ({ ...p, [key]: value }));
-  const closeSafe = () => {
+  const closeSafe = async () => {
     if (
       JSON.stringify(v) !==
         JSON.stringify(
@@ -60,19 +62,29 @@ export function BeanEditor({
             cover: "",
           },
         ) &&
-      !confirm("Discard your unsaved bean changes?")
+      !(await confirm({
+        title: "Discard bean changes?",
+        description: "Your unsaved changes to this bean will be lost.",
+        confirmLabel: "Discard changes",
+        destructive: true,
+      }))
     )
       return;
     close();
   };
   const notes = [
     ...new Set([
-      ...(noteSeeds[category] || []),
       ...data.choices
         .filter((n) => n.kind === "note" && n.category === category)
         .map((n) => n.name),
     ]),
   ];
+  const missingSuggestions = noteSeeds[category].some(
+    (name) =>
+      !data.choices.some(
+        (n) => n.kind === "note" && n.name.toLowerCase() === name.toLowerCase(),
+      ),
+  );
   const frequent = [...new Set(data.beans.flatMap((b) => b.notes))]
     .sort(
       (a, b) =>
@@ -268,6 +280,36 @@ export function BeanEditor({
               </button>
             ))}
           </div>
+          {!notes.length && (
+            <p className="muted">
+              No taste notes in this category yet. Add your own or start with
+              suggested notes.
+            </p>
+          )}
+          {missingSuggestions && (
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  await save("seedTasteNotes", { category });
+                } catch (e) {
+                  setError(
+                    e instanceof Error
+                      ? e.message
+                      : "Unable to add suggested notes",
+                  );
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Add suggested {category} notes
+            </Button>
+          )}
           <div className="inline-form">
             <input
               aria-label="Custom taste note"
@@ -278,11 +320,27 @@ export function BeanEditor({
             <Button
               type="button"
               variant="outline"
+              disabled={busy || !custom.trim()}
               onClick={async () => {
                 if (!custom.trim()) return;
-                await save("choice", { kind: "note", name: custom, category });
-                toggle(custom.trim());
-                setCustom("");
+                setBusy(true);
+                setError("");
+                try {
+                  await save("choice", {
+                    kind: "note",
+                    name: custom,
+                    category,
+                  });
+                  if (!v.notes.includes(custom.trim()))
+                    update("notes", [...v.notes, custom.trim()]);
+                  setCustom("");
+                } catch (e) {
+                  setError(
+                    e instanceof Error ? e.message : "Unable to add taste note",
+                  );
+                } finally {
+                  setBusy(false);
+                }
               }}
             >
               Add
@@ -327,6 +385,7 @@ export function BeanEditor({
           </Button>
         </div>
       </form>
+      {confirmDialog}
     </Dialog>
   );
 }

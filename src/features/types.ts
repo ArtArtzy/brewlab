@@ -1,5 +1,6 @@
 import {
   Bean,
+  Choice,
   Brew,
   Drink,
   Equipment,
@@ -32,5 +33,6 @@ export type Modal =
     }
   | { type: "purchase"; beanId: string }
   | { type: "equipment"; kind: Equipment["kind"]; item?: Equipment }
+  | { type: "tasteNote"; item?: Choice }
   | { type: "pin"; version: Version }
   | null;

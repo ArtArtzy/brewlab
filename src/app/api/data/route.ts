@@ -8,6 +8,7 @@ import {
   familyFor,
   adjustmentSchema,
   categories,
+  noteSeeds,
 } from "@/lib/domain/types";
 import { z } from "zod";
 const tables = [
@@ -238,7 +239,66 @@ export async function POST(req: NextRequest) {
       );
     } else if (b.action === "deleteEquipment")
       check((await client.from("equipment").delete().eq("id", id)).error);
-    else if (b.action === "choice") {
+    else if (b.action === "seedTasteNotes") {
+      const { data: existing, error } = await client
+        .from("choices")
+        .select("name")
+        .eq("kind", "note");
+      check(error);
+      const names = new Set((existing || []).map((n) => n.name.toLowerCase()));
+      const category =
+        b.value?.category === undefined
+          ? undefined
+          : z
+              .string()
+              .refine((c) => categories.includes(c), "Choose a taste category.")
+              .parse(b.value.category);
+      const notes = Object.entries(noteSeeds)
+        .filter(([c]) => category === undefined || c === category)
+        .flatMap(([category, suggested]) =>
+          suggested
+            .filter((name) => !names.has(name.toLowerCase()))
+            .map((name) => ({ kind: "note", name, category })),
+        );
+      if (notes.length)
+        check(
+          (
+            await client
+              .from("choices")
+              .upsert(notes, {
+                onConflict: "kind,name",
+                ignoreDuplicates: true,
+              })
+          ).error,
+        );
+    } else if (b.action === "tasteNote" || b.action === "deleteTasteNote") {
+      const noteId = z.uuid().parse(id);
+      const deleting = b.action === "deleteTasteNote";
+      const value = deleting
+        ? null
+        : z
+            .object({
+              name: z.string().trim().min(1).max(80),
+              category: z.enum([
+                "Fruity",
+                "Floral",
+                "Sweet",
+                "Chocolate / Nutty",
+                "Other",
+              ]),
+            })
+            .parse(b.value);
+      check(
+        (
+          await client.rpc("manage_taste_note", {
+            p_id: noteId,
+            p_name: value?.name ?? null,
+            p_category: value?.category ?? null,
+            p_delete: deleting,
+          })
+        ).error,
+      );
+    } else if (b.action === "choice") {
       const v = z
         .object({
           kind: z.enum(["note", "process", "pattern"]),

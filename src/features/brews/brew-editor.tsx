@@ -17,6 +17,7 @@ import {
 } from "@/lib/recommendations";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { RecipeView } from "@/features/recipes/recipe-view";
 import { RecipeEditor } from "@/features/recipes/recipe-editor";
 export function BrewEditor({
@@ -36,6 +37,7 @@ export function BrewEditor({
   save: (action: string, value: unknown, id?: string) => Promise<void>;
   close: () => void;
 }) {
+  const { ask: confirm, dialog: confirmDialog } = useConfirm();
   const [actual, setActual] = useState(structuredClone(recipe)),
     [editing, setEditing] = useState(false),
     [rating, setRating] = useState<number | null>(brew?.rating || null),
@@ -64,8 +66,17 @@ export function BrewEditor({
           ? "Your brew is saved. Latest has not changed."
           : "Record what you actually brewed. Rating and feedback are optional."
       }
-      onClose={() => {
-        if (saved || confirm("Discard this unsaved brew?")) close();
+      onClose={async () => {
+        if (
+          saved ||
+          (await confirm({
+            title: "Discard brew?",
+            description: "Your unsaved brew log and feedback will be lost.",
+            confirmLabel: "Discard brew",
+            destructive: true,
+          }))
+        )
+          close();
       }}
     >
       {!saved && (
@@ -170,6 +181,7 @@ export function BrewEditor({
           </div>
         </>
       )}
+      {confirmDialog}
       {saved && (
         <>
           {!canonical(actual) ? (

@@ -8,14 +8,7 @@ import {
   ChevronRight,
   Bean as BeanIcon,
 } from "lucide-react";
-import {
-  Bean,
-  Data,
-  Drink,
-  categories,
-  noteSeeds,
-  roasts,
-} from "@/lib/domain/types";
+import { Bean, Data, Drink, categories, roasts } from "@/lib/domain/types";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/brand";
 import Image from "next/image";
@@ -73,13 +66,11 @@ export function BeanList({
           (k === "note"
             ? b.notes.includes(v)
             : k === "category"
-              ? b.notes.some(
-                  (n) =>
-                    (noteSeeds[v] || []).includes(n) ||
-                    data.choices.some(
-                      (c) =>
-                        c.kind === "note" && c.name === n && c.category === v,
-                    ),
+              ? b.notes.some((n) =>
+                  data.choices.some(
+                    (c) =>
+                      c.kind === "note" && c.name === n && c.category === v,
+                  ),
                 )
               : b[k as keyof Bean] === v),
       ),
@@ -254,7 +245,7 @@ export function BeanList({
                   </p>
                 )}
                 <div className="taste-inline">
-                  {b.notes.slice(0, 3).map((n) => (
+                  {b.notes.map((n) => (
                     <span key={n}>{n}</span>
                   ))}
                 </div>

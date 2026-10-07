@@ -1,4 +1,5 @@
 import { z } from "zod";
+import commonTasteNotes from "./taste-notes.json";
 export const drinks = ["AMERICANO", "HOT_LATTE", "ICED_LATTE"] as const;
 export type Drink = (typeof drinks)[number];
 export const drinkNames: Record<Drink, string> = {
@@ -20,22 +21,7 @@ export const categories = [
   "Chocolate / Nutty",
   "Other",
 ];
-export const noteSeeds: Record<string, string[]> = {
-  Fruity: [
-    "Berry",
-    "Cherry",
-    "Peach",
-    "Orange",
-    "Lemon",
-    "Apple",
-    "Grape",
-    "Tropical",
-  ],
-  Floral: ["Rose", "Jasmine", "Hibiscus", "Tea-like"],
-  Sweet: ["Honey", "Caramel", "Brown Sugar", "Candy", "Vanilla"],
-  "Chocolate / Nutty": ["Chocolate", "Cocoa", "Almond", "Hazelnut"],
-  Other: ["Tiramisu", "Whiskey Like", "Winey", "Fermented", "Spice"],
-};
+export const noteSeeds: Record<string, string[]> = commonTasteNotes;
 export const beanSchema = z.object({
   name: z.string().trim().min(1).max(120),
   roaster: z.string().trim().min(1).max(120),

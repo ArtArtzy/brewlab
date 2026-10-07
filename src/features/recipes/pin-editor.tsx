@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Data, Version } from "@/lib/domain/types";
 import { Dialog } from "@/components/ui/dialog";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { Button } from "@/components/ui/button";
 export function PinEditor({
   version,
@@ -14,6 +15,7 @@ export function PinEditor({
   mutate: (p: Record<string, unknown>) => Promise<void>;
   close: () => void;
 }) {
+  const { ask: confirm, dialog: confirmDialog } = useConfirm();
   const [label, setLabel] = useState("Love it"),
     [custom, setCustom] = useState(""),
     [error, setError] = useState(""),
@@ -62,7 +64,15 @@ export function PinEditor({
         <Button
           disabled={!final || busy}
           onClick={async () => {
-            if (exists && !confirm(`Replace your ${final} pinned recipe?`))
+            if (
+              exists &&
+              !(await confirm({
+                title: "Replace pinned recipe?",
+                description: `A pin named “${final}” already exists. Replacing it changes that saved recipe snapshot.`,
+                confirmLabel: "Replace pin",
+                destructive: true,
+              }))
+            )
               return;
             setBusy(true);
             try {
@@ -82,6 +92,7 @@ export function PinEditor({
           {exists ? "Replace pinned recipe" : "Pin recipe"}
         </Button>
       </div>
+      {confirmDialog}
     </Dialog>
   );
 }

@@ -523,6 +523,20 @@ p.muted {
   right: 17px;
   bottom: 20px;
 }
+.taste-note-settings {
+  margin-top: 24px;
+}
+.taste-note-settings .equipment-name strong {
+  overflow-wrap: anywhere;
+}
+.taste-note-category {
+  margin: 0;
+  padding: 10px 0 0;
+}
+.taste-note-category > summary {
+  font-size: 15px;
+  font-weight: 600;
+}
 .bean-management-grid .bean-card {
   display: flex;
 }
@@ -1024,6 +1038,36 @@ p.muted {
   padding: 30px;
   z-index: 31;
   box-shadow: 0 20px 80px #221b2233;
+}
+.confirm-dialog {
+  width: min(440px, calc(100% - 32px));
+  padding: 28px;
+}
+.confirm-dialog .dialog-head {
+  margin-bottom: 20px;
+}
+.confirm-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--brown);
+  background: #f2ece2;
+}
+.confirm-mark.danger {
+  color: #a24737;
+  background: #fae9e4;
+}
+.confirm-actions {
+  margin-top: 24px;
+}
+.button.danger {
+  color: #fff;
+  background: #a24737;
+}
+.button.danger:hover {
+  background: #873c30;
 }
 .dialog-head {
   display: flex;

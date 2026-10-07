@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY)
   throw new Error(
@@ -36,22 +36,12 @@ for (const [kind, name, is_default] of equipment) {
   });
   if (error) throw error;
 }
-const notes = {
-  Fruity: [
-    "Berry",
-    "Cherry",
-    "Peach",
-    "Orange",
-    "Lemon",
-    "Apple",
-    "Grape",
-    "Tropical",
-  ],
-  Floral: ["Rose", "Jasmine", "Hibiscus", "Tea-like"],
-  Sweet: ["Honey", "Caramel", "Brown Sugar", "Candy", "Vanilla"],
-  "Chocolate / Nutty": ["Chocolate", "Cocoa", "Almond", "Hazelnut"],
-  Other: ["Tiramisu", "Whiskey Like", "Winey", "Fermented", "Spice"],
-};
+const notes = JSON.parse(
+  readFileSync(
+    new URL("../src/lib/domain/taste-notes.json", import.meta.url),
+    "utf8",
+  ),
+);
 const choices = Object.entries(notes)
   .flatMap(([category, ns]) =>
     ns.map((name) => ({ kind: "note", name, category })),
@@ -66,9 +56,24 @@ const choices = Object.entries(notes)
       (name) => ({ kind: "pattern", name, category: "" }),
     ),
   );
-const result = await db
+const { data: existingChoices, error: choicesError } = await db
   .from("choices")
-  .upsert(choices, { onConflict: "kind,name" });
+  .select("kind,name");
+if (choicesError) throw choicesError;
+const keys = new Set(
+  existingChoices.map((c) => `${c.kind}:${c.name.toLowerCase()}`),
+);
+const missingChoices = choices.filter(
+  (c) => !keys.has(`${c.kind}:${c.name.toLowerCase()}`),
+);
+const result = missingChoices.length
+  ? await db
+      .from("choices")
+      .upsert(missingChoices, {
+        onConflict: "kind,name",
+        ignoreDuplicates: true,
+      })
+  : { error: null };
 if (result.error) throw result.error;
 console.log(
   "Equipment and reusable choices seeded. No beans or brew history created.",

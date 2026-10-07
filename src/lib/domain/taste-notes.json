@@ -1,0 +1,45 @@
+{
+  "Fruity": [
+    "Berry",
+    "Strawberry",
+    "Blueberry",
+    "Raspberry",
+    "Blackberry",
+    "Cherry",
+    "Peach",
+    "Apple",
+    "Grape",
+    "Orange",
+    "Lemon",
+    "Lychee",
+    "Tropical"
+  ],
+  "Floral": ["Rose", "Jasmine", "Hibiscus", "Chamomile", "Tea-like"],
+  "Sweet": [
+    "Honey",
+    "Caramel",
+    "Brown Sugar",
+    "Vanilla",
+    "Candy",
+    "Maple Syrup"
+  ],
+  "Chocolate / Nutty": [
+    "Chocolate",
+    "Cocoa",
+    "Dark Chocolate",
+    "Milk Chocolate",
+    "Almond",
+    "Hazelnut",
+    "Walnut",
+    "Peanut"
+  ],
+  "Other": [
+    "Fermented",
+    "Winey",
+    "Whiskey Like",
+    "Spice",
+    "Cinnamon",
+    "Tiramisu",
+    "Black Tea"
+  ]
+}

@@ -8,7 +8,7 @@ Requires Node.js 22.12 or later and a Supabase project.
 
 1. `npm install`
 2. Copy `.env.example` to `.env.local`. Set your Supabase URL and **server-only** service-role key. Choose a four-digit `APP_PIN` and a random `SESSION_SECRET` of at least 32 characters (`node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"`). Set `APP_ORIGIN` to the exact app origin.
-3. Apply `supabase/migrations/20261005204317_brew_lab.sql` in the Supabase SQL editor. Alternatively, link your Supabase CLI project and run `supabase db push`. The migration creates the private `bean-covers` bucket.
+3. Apply the SQL files in `supabase/migrations/` in filename order in the Supabase SQL editor. Alternatively, link your Supabase CLI project and run `supabase db push`. The migrations create the private `bean-covers` bucket and taste note management function.
 4. `npm run seed` seeds equipment, categorized taste notes, processes and pour patterns. It is repeatable and creates no beans or personal brew history. `supabase/seed.sql` supplies equipment/process/pattern defaults for local Supabase reset; the JS seed also adds all taste notes.
 5. `npm run dev`, then open http://localhost:3000 and unlock with your PIN.
 
@@ -33,6 +33,8 @@ Home has exactly three choices. Americano selects pour over, then 15g, 20g or cu
 - `src/app/api`: authenticated data, image, unlock and logout endpoints.
 
 Beans, reusable choices, equipment, purchases, recipe families, immutable recipe versions, pins and brew logs are separate relational entities. A version stores the complete reproduction snapshot as JSONB, including ordered pour steps and equipment names/types. This deliberate snapshot representation prevents edits/deletion of equipment from rewriting history. Latest is a pointer updated in one transaction with version creation. Database triggers prohibit version updates; composite foreign keys prevent pins pointing to the wrong bean/family. Logs have their own editable snapshots and do not update family pointers. Deletes cascade only from the explicitly deleted bean.
+
+Settings includes a searchable taste note library with five categories: Fruity, Floral, Sweet, Chocolate / Nutty, and Other. Common suggestions are stored in `src/lib/domain/taste-notes.json`. Tags can be added, renamed, moved between categories, or deleted. Renaming updates every bean using that tag; deleting removes it from those beans after confirmation. Tag changes and bean links are updated in one database transaction. Add missing suggested notes from Settings or the bean editor to restore suggestions without changing existing tags or selecting them on a bean.
 
 ## Security
 

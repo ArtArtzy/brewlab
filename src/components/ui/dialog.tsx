@@ -1,17 +1,21 @@
 "use client";
 import * as D from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
+import { useId } from "react";
 export function Dialog({
   title,
   description,
   children,
   onClose,
+  className,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
   onClose: () => void;
+  className?: string;
 }) {
+  const descriptionId = useId();
   return (
     <D.Root
       open
@@ -22,16 +26,14 @@ export function Dialog({
       <D.Portal>
         <D.Overlay className="dialog-overlay" />
         <D.Content
-          className="dialog-content"
-          aria-describedby={description ? "dialog-description" : undefined}
+          className={`dialog-content ${className || ""}`}
+          aria-describedby={description ? descriptionId : undefined}
         >
           <div className="dialog-head">
             <div>
               <D.Title>{title}</D.Title>
               {description && (
-                <D.Description id="dialog-description">
-                  {description}
-                </D.Description>
+                <D.Description id={descriptionId}>{description}</D.Description>
               )}
             </div>
             <D.Close className="icon-button" aria-label="Close">

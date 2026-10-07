@@ -1,5 +1,6 @@
 import { Check, Download, LogOut, Plus, Trash2 } from "lucide-react";
-import { Data, Equipment } from "@/lib/domain/types";
+import { Choice, Data, Equipment } from "@/lib/domain/types";
+import { TasteNotes } from "./taste-notes";
 import { Button } from "@/components/ui/button";
 const names: Record<Equipment["kind"], string> = {
   grinder: "Grinders",
@@ -14,12 +15,18 @@ export function Settings({
   remove,
   toggle,
   logout,
+  editNote,
+  removeNote,
+  restoreNotes,
 }: {
   data: Data;
   edit: (kind: Equipment["kind"], e?: Equipment) => void;
   remove: (e: Equipment) => void;
   toggle: (e: Equipment) => void;
   logout: () => void;
+  editNote: (item?: Choice) => void;
+  removeNote: (item: Choice) => Promise<void>;
+  restoreNotes: () => Promise<void>;
 }) {
   return (
     <>
@@ -90,6 +97,12 @@ export function Settings({
           </section>
         ))}
       </div>
+      <TasteNotes
+        data={data}
+        edit={editNote}
+        remove={removeNote}
+        restore={restoreNotes}
+      />
       <section className="settings-data">
         <div>
           <h2>Your notebook, yours to keep.</h2>

@@ -8,6 +8,7 @@ import {
   timeLabel,
 } from "@/lib/domain/types";
 import { Button } from "@/components/ui/button";
+import { useConfirm } from "@/components/ui/use-confirm";
 import { ArrowUp, ArrowDown, Plus, Trash2 } from "lucide-react";
 export function initialRecipe(data: Data, drink: Drink, dose: number): Recipe {
   const pick = (kind: string) => {
@@ -48,6 +49,7 @@ export function RecipeEditor({
   onCancel: () => void;
   saveLabel?: string;
 }) {
+  const { ask: confirm, dialog: confirmDialog } = useConfirm();
   const [r, set] = useState(structuredClone(initial)),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -74,7 +76,7 @@ export function RecipeEditor({
         e.kind === kind &&
         (kind !== "filter" || e.available || e.name === r[key]),
     );
-    if (options.length === 1 && kind !== "filter" && options[0].name===r[key])
+    if (options.length === 1 && kind !== "filter" && options[0].name === r[key])
       return (
         <div className="equipment-static">
           <span>{label}</span>
@@ -368,10 +370,15 @@ export function RecipeEditor({
         <Button
           variant="outline"
           type="button"
-          onClick={() => {
+          onClick={async () => {
             if (
               JSON.stringify(r) !== JSON.stringify(initial) &&
-              !confirm("Discard unsaved recipe changes?")
+              !(await confirm({
+                title: "Discard recipe changes?",
+                description: "Your unsaved recipe edits will be lost.",
+                confirmLabel: "Discard changes",
+                destructive: true,
+              }))
             )
               return;
             onCancel();
@@ -381,6 +388,7 @@ export function RecipeEditor({
         </Button>
         <Button disabled={busy}>{busy ? "Saving…" : saveLabel}</Button>
       </div>
+      {confirmDialog}
     </form>
   );
 }

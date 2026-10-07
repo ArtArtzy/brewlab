@@ -27,6 +27,157 @@ beforeAll(async () => {
 afterAll(async () => {
   await db?.close();
 });
+
+describe("Taste note management", () => {
+  beforeAll(async () => {
+    await db.exec(
+      readFileSync(
+        "supabase/migrations/20261006231246_manage_taste_notes.sql",
+        "utf8",
+      ),
+    );
+  });
+  it("renames tags on beans, preserves note order and updates relational links", async () => {
+    const {
+      rows: [note],
+    } = await db.query<{ id: string }>(
+      "insert into choices(kind,name,category) values('note','Test old note','Fruity') returning id",
+    );
+    const {
+      rows: [bean],
+    } = await db.query<{ id: string }>(
+      "insert into beans(name,roaster,notes) values('Note test','Test',array['Honey','Test old note','Cocoa']) returning id",
+    );
+    await db.query(
+      "select manage_taste_note($1,'Test renamed note','Sweet',false)",
+      [note.id],
+    );
+    const updated = await db.query<{ notes: string[] }>(
+      "select notes from beans where id=$1",
+      [bean.id],
+    );
+    expect(updated.rows[0].notes).toEqual([
+      "Honey",
+      "Test renamed note",
+      "Cocoa",
+    ]);
+    const tags = await db.query<{
+      name: string;
+      category: string;
+      note_id: string;
+    }>(
+      "select c.name,c.category,n.note_id from bean_taste_notes n join choices c on c.id=n.note_id where n.bean_id=$1 and n.note_id=$2",
+      [bean.id, note.id],
+    );
+    expect(tags.rows[0]).toEqual({
+      name: "Test renamed note",
+      category: "Sweet",
+      note_id: note.id,
+    });
+    expect(
+      (await db.query("select id from choices where name='Test old note'"))
+        .rows,
+    ).toHaveLength(0);
+  });
+  it("rejects duplicate names without partially changing beans or tags", async () => {
+    const {
+      rows: [note],
+    } = await db.query<{ id: string }>(
+      "select id from choices where name='Test renamed note'",
+    );
+    await expect(
+      db.query("select manage_taste_note($1,'Honey','Other',false)", [note.id]),
+    ).rejects.toThrow("already exists");
+    const unchanged = await db.query<{ name: string; category: string }>(
+      "select name,category from choices where id=$1",
+      [note.id],
+    );
+    expect(unchanged.rows[0]).toEqual({
+      name: "Test renamed note",
+      category: "Sweet",
+    });
+    expect(
+      (
+        await db.query(
+          "select id from beans where notes @> array['Test renamed note']",
+        )
+      ).rows,
+    ).toHaveLength(1);
+  });
+  it("deletes a used tag from beans and relational links while keeping other notes", async () => {
+    const {
+      rows: [note],
+    } = await db.query<{ id: string }>(
+      "select id from choices where name='Test renamed note'",
+    );
+    await db.query("select manage_taste_note($1,null,null,true)", [note.id]);
+    const bean = await db.query<{ notes: string[] }>(
+      "select notes from beans where name='Note test'",
+    );
+    expect(bean.rows[0].notes).toEqual(["Honey", "Cocoa"]);
+    expect(
+      (
+        await db.query("select * from bean_taste_notes where note_id=$1", [
+          note.id,
+        ])
+      ).rows,
+    ).toHaveLength(0);
+    expect(
+      (await db.query("select * from choices where id=$1", [note.id])).rows,
+    ).toHaveLength(0);
+    await expect(
+      db.query("select manage_taste_note($1,null,null,true)", [note.id]),
+    ).rejects.toThrow("not found");
+  });
+});
+describe("Common taste note suggestions", () => {
+  it("restores every category without duplicating capitalization variants or changing bean selections", async () => {
+    await db.exec(
+      "update choices set category='Other' where kind='note' and name in ('Rose','Brown Sugar','Chocolate'); delete from choices where kind='note' and name='Jasmine'; insert into choices(kind,name,category) values('note','BlackBerry','Fruity');",
+    );
+    const before = await db.query("select id,notes from beans order by id");
+    const sql = readFileSync(
+      "supabase/migrations/20261006233256_restore_common_taste_notes.sql",
+      "utf8",
+    );
+    await db.exec(sql);
+    const category = await db.query<{ name: string; category: string }>(
+      "select name,category from choices where name in ('Rose','Brown Sugar','Chocolate') order by name",
+    );
+    expect(category.rows).toEqual([
+      { name: "Brown Sugar", category: "Sweet" },
+      { name: "Chocolate", category: "Chocolate / Nutty" },
+      { name: "Rose", category: "Floral" },
+    ]);
+    expect(
+      (
+        await db.query(
+          "select id from choices where kind='note' and lower(name)='blackberry'",
+        )
+      ).rows,
+    ).toHaveLength(1);
+    expect(
+      (
+        await db.query(
+          "select id from choices where name='Jasmine' and category='Floral'",
+        )
+      ).rows,
+    ).toHaveLength(1);
+    const groups = await db.query(
+      "select distinct category from choices where kind='note'",
+    );
+    expect(groups.rows).toHaveLength(5);
+    expect(
+      (await db.query("select id,notes from beans order by id")).rows,
+    ).toEqual(before.rows);
+    const count = await db.query("select count(*) from choices");
+    await db.exec(sql);
+    expect((await db.query("select count(*) from choices")).rows).toEqual(
+      count.rows,
+    );
+  });
+});
+
 describe("Database historical integrity", () => {
   it("stores ordered pours as relational rows", async () => {
     const steps = await db.query<{ cumulative_water: string }>(
